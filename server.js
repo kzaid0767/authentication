@@ -29,20 +29,24 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {    
     const { username, password } = req.body;
     const user = users.find((u) => u.username === username && u.password === password);
-    if (user) {
-        req.session.user = user;
+    console.log(user);
+    //create some cookies
+     if (user) {
+       // req.session.user = user;
+
         res.redirect("/dashboard");
     } else {
         res.redirect("/login");
-    }
+    } 
 });
 
 app.get("/dashboard", (req, res) => {
-    if (req.session.user) {
+    /* if (req.session.user) {
         res.render("dashboard", { username: req.session.user.username });        
     } else {
         res.redirect("/login");
-    }
+    } */
+   res.render("dashboard");
 });
 
 app.get("/logout", (req, res) => {    
