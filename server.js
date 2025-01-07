@@ -1,6 +1,8 @@
 import express from "express";
-import path from "path";
+import path, { parse } from "path";
+import { json } from "stream/consumers";
 import { fileURLToPath } from "url";
+import cookieParser from "cookie-parser";
 
 const app = express();
 const port = 8082 || process.env.PORT;
@@ -9,7 +11,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
+app.use(cookieParser());
+//app.set("views", path.join(__dirname, "views"));
 
 //Simulated Database of Users
 const users = [
@@ -29,8 +32,10 @@ app.get("/login", (req, res) => {
 app.post("/login", (req, res) => {    
     const { username, password } = req.body;
     const user = users.find((u) => u.username === username && u.password === password);
-    console.log(user);
+   
     //create some cookies
+    res.cookie("user", JSON.stringify(user), 
+        { maxAge: 1000 * 60 * 60 * 24, httpOnly: true, secure: false, sameSite: "strict" });
      if (user) {
        // req.session.user = user;
 
@@ -41,16 +46,22 @@ app.post("/login", (req, res) => {
 });
 
 app.get("/dashboard", (req, res) => {
-    /* if (req.session.user) {
-        res.render("dashboard", { username: req.session.user.username });        
-    } else {
+    //check if user is logged in
+    const user = req.cookies.user ? JSON.parse(req.cookies.user) : null;
+    console.log( user);
+    const username = user ? user.username : null;
+    console.log(username);
+    if (username) {
+        res.render("dashboard", { username });
+    }
+    else {
         res.redirect("/login");
-    } */
-   res.render("dashboard");
+    }
 });
 
 app.get("/logout", (req, res) => {    
-    req.session.destroy();
+    //clear cookies
+    res.clearCookie("user");
     res.redirect("/login");
 });
 
