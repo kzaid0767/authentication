@@ -43,9 +43,27 @@ app.set("view engine", "ejs");
 app.use(cookieParser());
 app.set("views", path.join(__dirname, "views"));
 
-//Simulated Database of Users
+//Simulated middleware
+//isauthenticated
+const isAuthenticated = (req, res, next) => {
+    const user = req.cookies.user ? JSON.parse(req.cookies.user) : null;
+    if (user) {
+        next();
+    } else {
+        res.redirect("/login");
+    }
+};      
 
-//not using browser for api only
+//isadmin middleware
+const isAdmin = (req, res, next) => {
+    const user = req.cookies.user ? JSON.parse(req.cookies.user) : null;
+    if (user.role === "admin") {
+        next();
+    } else {
+        res.redirect("/dashboard");
+    }
+}; 
+
 
 app.get("/", (req, res) => {
     res.render("home");
@@ -67,6 +85,13 @@ app.get("/login", (req, res) => {
     res.render("login");
 });
 
+//admin route
+app.get("/admin", isAuthenticated, isAdmin, (req, res) => {
+    const user = req.cookies.user ? JSON.parse(req.cookies.user) : null;
+    const username = user ? user.username : null; 
+    res.render("admin", { username });
+});
+
 app.post("/login", async(req, res) => {    
     const { username, password } = req.body;
     
@@ -82,7 +107,7 @@ app.post("/login", async(req, res) => {
     
     if (isPasswordValid) {
         //create some cookies
-        res.cookie("user", JSON.stringify(user), 
+        res.cookie("user", JSON.stringify({username, role: user.role}), 
         { maxAge: 1000 * 60 * 60 * 24, httpOnly: true, secure: false, sameSite: "strict" });
         res.redirect("/dashboard");
     }else{
@@ -90,12 +115,10 @@ app.post("/login", async(req, res) => {
     }  
 });
 
-app.get("/dashboard", (req, res) => {
+app.get("/dashboard", isAuthenticated, (req, res) => {
     //check if user is logged in
     const user = req.cookies.user ? JSON.parse(req.cookies.user) : null;
-    console.log( user);
     const username = user ? user.username : null;
-    console.log(username);
     if (username) {
         res.json({ message: `Welcome ${username}, role: ${user.role}` });
     }
