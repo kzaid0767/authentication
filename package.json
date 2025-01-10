@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon serverapi.js"
+    "start": "nodemon serverwithdb.js"
   },
   "type": "module",
   "repository": {
@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/kzaid0767/authentication#readme",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "ejs": "^3.1.10",
     "express": "^4.21.2",
