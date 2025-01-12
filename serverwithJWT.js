@@ -1,4 +1,5 @@
-//session based authentication, installed express-session and connect-mongo
+//Using JWT for authentication
+import jwt from "jsonwebtoken";
 import session from "express-session";
 import MongoStore from "connect-mongo";
 import express from "express";
@@ -42,7 +43,7 @@ const Player = mongoose.model("Player", playerSchema);
 app.use(express.urlencoded({ extended: true }));
 app.set("view engine", "ejs");
 app.use(cookieParser());
-app.set("views", path.join(__dirname, "views"));
+//app.set("views", path.join(__dirname, "views"));
 
 //Simulated middleware
 
@@ -63,18 +64,28 @@ app.use(session({
 
 //isauthenticated
 const isAuthenticated = (req, res, next) => {
-    const user = req.session.user;
-    console.log(user);
-    if (user) {
-        next();
+    //check if user is logged in with JWT
+    const token = req.cookies.token;
+    
+    if (token) {
+        jwt.verify(token, "secret", (err, decoded) => {
+            if (err) {
+                res.redirect("/login");
+            } else {
+                req.user = decoded;
+                next();
+            }
+        });
     } else {
         res.redirect("/login");
     }
-};      
+};
+
+     
 
 //isadmin middleware
 const isAdmin = (req, res, next) => {
-    const user = req.session.user;
+    const user = req.user;
     if (user.role === "admin") {
         next();
     } else {
@@ -105,7 +116,7 @@ app.get("/login", (req, res) => {
 
 //admin route
 app.get("/admin", isAuthenticated, isAdmin, (req, res) => {
-    const user = req.session.user;
+    const user = req.user;
     const username = user ? user.username : null; 
     res.render("admin", { username });
 });
@@ -124,11 +135,10 @@ app.post("/login", async(req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     
     if (isPasswordValid) {
-        //create session
-        req.session.user = {
-            username: user.username,
-            role: user.role
-        };
+        //creat jwt token
+        const token = jwt.sign({ username: user.username, role: user.role }, "secret", { expiresIn: "1h" });
+        //saving token in cookie
+        res.cookie("token", token, { httpOnly: true, maxAge: 1000 * 60 * 60 * 24});;
         res.redirect("/dashboard");
     }else{
         res.send("Login failed, please try again");
@@ -137,7 +147,7 @@ app.post("/login", async(req, res) => {
 
 app.get("/dashboard", isAuthenticated, (req, res) => {
     //get user from session
-    const user = req.session.user;
+    const user = req.user;
     const username = user ? user.username : null;
     if (username) {
         res.render("dashboard", { username });
@@ -148,7 +158,7 @@ app.get("/dashboard", isAuthenticated, (req, res) => {
 
 app.get("/logout", (req, res) => {    
     //clear session
-    req.session.destroy();
+    res.clearCookie("token");
     res.redirect("/login");
 });
 
